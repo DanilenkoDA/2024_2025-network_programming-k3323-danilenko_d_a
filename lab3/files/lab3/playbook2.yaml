@@ -1,0 +1,53 @@
+- name: Collect netbox data
+  hosts: netbox
+  gather_facts: no
+  tasks:
+    - name: Get netbox devices data
+      set_fact:
+        devices: "{{ query('netbox.netbox.nb_lookup', 'devices', api_endpoint=api_endpoint, token=token, validate_certs=false) }}"
+
+    - name: Save data to file
+      copy:
+        content:
+          - "{{ devices }}"
+        dest: devices.json
+      delegate_to: localhost
+
+- name: Configure CHR
+  hosts: clients
+  gather_facts: no
+  tasks:
+    - name: Download data
+      ansible.builtin.slurp:
+        src: "./devices.json"
+      register: netbox_data_file
+      delegate_to: localhost
+
+    - name: Parse data
+      ansible.builtin.set_fact:
+        devices: "{{ netbox_data_file.content | b64decode | from_json }}"
+
+    - name: Debug
+      ansible.builtin.debug:
+        var: devices
+
+    - name: Extract router names and ips
+      set_fact:
+        router1_name: "{{ devices[0][0].value.name }}"
+        router1_ip: "{{ devices[0][0].value.primary_ip4.address }}"
+        router2_name: "{{ devices[0][1].value.name }}"
+        router2_ip: "{{ devices[0][1].value.primary_ip4.address }}"
+
+    - name: Configure CHR 1 name and ip
+      community.routeros.command:
+        commands:
+          - /ip address add address={{ router1_ip }} interface=test-bridge
+          - /system identity set name={{ router1_name }}
+      when: inventory_hostname == 'vpn-client1'
+
+    - name: Configure CHR 2 name and ip
+      community.routeros.command:
+        commands:
+          - /ip address add address={{ router2_ip }} interface=test-bridge
+          - /system identity set name={{ router2_name }}
+      when: inventory_hostname == 'vpn-client2'
