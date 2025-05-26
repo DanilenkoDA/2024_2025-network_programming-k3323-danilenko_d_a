@@ -49,7 +49,7 @@ playbook1:
 
 Получили файл [devices.json](files/lab3/devices.json)
 
-Написали [playbook](files/lab3/playbook2) для второго задания и выполнили его
+Написали [playbook](files/lab3/playbook2.yaml) для второго задания и выполнили его
 
 ```
 - name: Collect netbox data
