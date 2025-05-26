@@ -1,0 +1,15 @@
+---
+- name: Collect data
+  hosts: netbox
+  gather_facts: no
+  tasks: 
+    - name: Get netbox devices data
+      set_fact:
+        devices: "{{ query('netbox.netbox.nb_lookup', 'devices', api_endpoint=api_endpoint, token=token, validate_certs=false) }}"
+
+    - name: Save data to file
+      copy:
+        content:
+          - "{{ devices }}"
+        dest: devices.json
+      delegate_to: localhost
